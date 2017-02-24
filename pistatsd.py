@@ -2,7 +2,7 @@ import sys
 import sched, time
 
 # check for appropriate command line arguments
-if (len(sys.argv) != 9 or len(sys.argv) != 9):
+if (len(sys.argv) != 9 and len(sys.argv) != 7):
 	print('usage: pistatsd -b <message_broker> [-p <virtual_host>] [-c <login>:<password>] -k <routing_key>')
 	sys.exit(2)
 elif sys.argv[1] != "-b":
