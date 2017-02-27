@@ -83,8 +83,6 @@ try:
 	connection = pika.BlockingConnection(pika_params) #Connect to the message broker
 	channel = connection.channel() #Setup the channel
 	channel.exchange_declare(exchange='pi_utilization', type='direct')
-	result = channel.queue_declare(exclusive=True)
-	queue_name = result.method.queue
 
 except pika.exceptions.ChannelError as CE:
 	#print("ERROR: channel error has occured :" + CE.message)
