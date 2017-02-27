@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 import pika
 from pymongo import MongoClient
-from bson.objectid import ObjectId
 import json
 import argparse
+import sys
 
 firstInsert = True
 
@@ -12,6 +12,7 @@ client = MongoClient('localhost', 27017)
 db = client.database
 posts = db.posts
 
+# Parse command line arguments
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('-b', required=True)
 parser.add_argument('-p')
@@ -19,24 +20,59 @@ parser.add_argument('-c')
 parser.add_argument('-k', required=True)
 args = parser.parse_args()
 
+PORT_NUM = 5672
 address = args.b
 vHost = args.p
 cred = args.c
 key = args.k
 
-connection = pika.BlockingConnection(pika.ConnectionParameters(
-    host=address))
-channel = connection.channel()
+# Set defaults if no argument supplied
+if not vHost:
+    vHost = '/'
+if cred:
+    user = cred.split(':')[0]
+    password = cred.split(':')[1]
+else:
+    user = 'guest'
+    password = 'guest'
 
-channel.exchange_declare(exchange='pi_utilization',
-                         type='direct')
+# Set up connection
+try:
+    pika_creds = pika.PlainCredentials(user, password) #Login Credentials
+    pika_params = pika.ConnectionParameters(address, PORT_NUM, vHost, pika_creds) #Params for connection
 
-result = channel.queue_declare(exclusive=True)
-queue_name = result.method.queue
+    connection = pika.BlockingConnection(pika_params)
+    channel = connection.channel()
 
-channel.queue_bind(exchange='pi_utilization',
-                   queue=queue_name,
-                   routing_key = key)
+    channel.exchange_declare(exchange='pi_utilization',
+                             type='direct')
+
+    result = channel.queue_declare(exclusive=True)
+    queue_name = result.method.queue
+
+    channel.queue_bind(exchange='pi_utilization',
+                       queue=queue_name,
+                       routing_key = key)
+
+except pika.exceptions.ChannelError as CE:
+    print('ERROR: channel error has occurred')
+    sys.exit(2)
+
+except pika.exceptions.ChannelClosed as CC:
+    print('ERROR: permission denied')
+    sys.exit(2)
+
+except pika.exceptions.ConnectionClosed as CC:
+    print('ERROR: could not connect to channel')
+    sys.exit(2)
+
+except pika.exceptions.ProbableAuthenticationError as PAE:
+    print('ERROR: login and password did not match')
+    sys.exit(2)
+
+except pika.exceptions.ProbableAccessDeniedError as PADE:
+    print('ERROR: invalid virtual host')
+    sys.exit(2)
 
 print('Waiting for logs.')
 
