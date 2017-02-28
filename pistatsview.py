@@ -4,6 +4,8 @@ from pymongo import MongoClient
 import json
 import argparse
 import sys
+import time
+import RPi.GPIO as GPIO
 
 firstInsert = True
 
@@ -38,8 +40,8 @@ else:
 
 # Set up connection
 try:
-    pika_creds = pika.PlainCredentials(user, password) #Login Credentials
-    pika_params = pika.ConnectionParameters(address, PORT_NUM, vHost, pika_creds) #Params for connection
+    pika_creds = pika.PlainCredentials(user, password)
+    pika_params = pika.ConnectionParameters(address, PORT_NUM, vHost, pika_creds)
 
     connection = pika.BlockingConnection(pika_params)
     channel = connection.channel()
@@ -76,7 +78,35 @@ except pika.exceptions.ProbableAccessDeniedError as PADE:
 
 print('Waiting for logs.')
 
+
+# Change the GPIO output for the LED light
+# depending on the utilization percentage
+# that the method is passed.
+def changeLight(util_percent):
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(29, GPIO.OUT)
+    GPIO.setup(31, GPIO.OUT)
+    GPIO.setup(33, GPIO.OUT)
+    # If less than 25%, light up GREEN
+    if util_percent < 0.25:
+        GPIO.output(29, False)
+        GPIO.output(31, True)
+        GPIO.output(33, False)
+
+    # If greater than 25% and less than 50%, light up YELLOW
+    elif util_percent < 0.50:
+        GPIO.output(29, True)
+        GPIO.output(31, True)
+        GPIO.output(33, False)
+
+    # If greater than 50%, light up RED
+    else:
+        GPIO.output(29, True)
+        GPIO.output(31, False)
+        GPIO.output(33, False)
+
 hiLo = {}
+
 
 def callback(ch, method, properties, body):
     data = json.loads(body.decode("utf-8"))
@@ -145,6 +175,9 @@ def callback(ch, method, properties, body):
     print("wlan0: rx=", data["net"]["wlan0"]["rx"], "B/s [Hi:", rec['wlanrxHi'], "B/s, Lo:", rec['wlanrxLo'],
           "B/s], tx=", data["net"]["wlan0"]["tx"], "B/s [Hi:", rec['wlantxHi'], "B/s, Lo:", rec['wlantxLo'],
           "B/s]\n")
+
+    # Update LED
+    changeLight(data["cpu"])
 
 channel.basic_consume(callback,
                       queue=queue_name,

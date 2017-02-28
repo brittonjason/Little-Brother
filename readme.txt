@@ -1,8 +1,7 @@
 For our setup, we have the rabbitmq server set up on one raspberry pi, two hosts, and a monitor pi on the other end.
 
 In order for this setup to be successful, we had to have a couple of things installed. First of all, we installed rabbitmq-server
-on all the raspberry pis, as well as installing pika in order to connect to rabbitmq. In order to setup command line arguments, 
-our monitor raspberry pi also imported argparse, as opposed to our host pis, which simply parse the sys args.
+on all the raspberry pis, as well as installing pika in order to connect to rabbitmq. The monitor pi also installed MongoDB to store the data from each message. In order to setup command line arguments, our monitor raspberry pi imported argparse, as opposed to our host pis, which simply parse the sys args.
 
 When starting the server, the command run on the server pi is simply "sudo rabbitmq-server start" and the server is then up and running.
 From here, the server administration tool can be opened in order to monitor the proper operation of rabbitmq.
